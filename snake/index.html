@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title> Snake </title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+  <aside>
+    <header>
+      <h3>Snake</h3>
+      <h5> Light green represents apple, pink represents snake. </h5>
+    </header>
+    <blockquote class="quote speech-bubble">
+      <p> When the snake eats an apple, the score increases by 10.<br><br></p>
+      <p> When the snake head touches the wall or its body, the game ends.<br><br> </p>
+      <p> Start button, indicating the start.
+        Restart button, indicating the reStart.
+        Stop button, indicating the start.<br><br>
+      </p>
+      <p> At the beginning of the game, press the keyboard direction key to randomly generate the snake head.
+        when using the mouse, the game restarts.
+      </p>
+    </blockquote>
+  </aside>
+  <div class='counter'>
+    <button class='start'>start</button>
+    <button class='restart'>restart</button>
+    <button class='stop'>stop</button>
+    <div class='bar'>
+      <span> score: <b class='score'></b></span>
+      <span> time: <b class='time'></b></span>
+    </div>
+  </div>
+  <section class="bolad">
+
+  </section>
+  <div class="confim">
+    <span class="close">x</span>
+    <h1>游戏结束</h1>
+  </div>
+  <script src="./js/snake.js"></script>
+  <script>
+    var bolad = document.querySelector('section')
+    var score = document.querySelector('.score')
+    var time = document.querySelector('.time')
+
+    var start = document.querySelector('.start')
+    var restart = document.querySelector('.restart')
+    var stop = document.querySelector('.stop')
+
+    var confim = document.querySelector('.confim')
+    var close = document.querySelector('.close')
+    var setInte, btype = false, bstart = true, gtime = 0
+    bolad.disabled = false
+
+    var s = new Snake()
+    //初始化表格
+    function createTable(s) {
+      // body...
+      var res = '<table><tbody>'
+      s.bolad.map(row => {
+        res += '<tr>'
+        row.map(it => {
+          if (it == 'Q') {
+            res += '<td class="c1">'
+          } else if (it == '^' || it == 'A' || it == 'V' || it == '>' || it == '<') {
+            res += '<td class="sbody">'
+          } else {
+            res += '<td>'
+          }
+          res += it + '</td>'
+        })
+        res += '</tr>'
+      })
+      res += '</tbody></table>'
+      score.innerHTML = s.count * 10
+      return res
+    }
+    //shead样式
+    function headStyle(s) {
+      var x = s.head[0]
+      var y = s.head[1]
+      var flag = s.bolad[y][x]
+      var table = document.querySelector('table')
+      var idx = table.children[0].children[y].children[x]
+
+      if (flag == 'A' || flag == '^') {
+        idx.className = 'sheadUp'
+      }
+      if (flag == '>') {
+        idx.className = 'sheadRight'
+      }
+      if (flag == '<') {
+        idx.className = 'sheadLeft'
+      }
+      if (flag == 'V') {
+        idx.className = 'sheadDown'
+      }
+    }
+
+    //游戏时间
+    function gettime(s) {
+      var t = Date.now() - s.time
+
+      var s = t / 1000 % 60 | 0
+      var m = s / 60 | 0
+      var h = m / 60 | 0
+
+      var res = h + ' : ' + m + ' : ' + s
+
+      time.innerHTML = res
+      gtime = t
+      return t
+    }
+
+    //bolad页面初始化
+    function init() {
+      bolad.innerHTML = createTable(s)
+      gettime(s)
+    }
+    init()
+
+    //自动进行操作
+    function auto() {
+      if (btype) return
+      s.head = s.tail = s.setsnakeHead()
+      if (bstart && bolad.disabled == false) {
+        setInte = setInterval(() => {
+          if (s.next()) {
+            bolad.innerHTML = createTable(s)
+            headStyle(s)
+            gettime(s)
+          } else {
+            bolad.disabled = true
+            clearInterval(setInte)
+            confim.style.display = 'block'
+          }
+        }, 2000)
+        bstart = false
+      }
+      btype = true
+    }
+    auto()
+
+    //按钮监听事件
+    restart.addEventListener('click', e => {
+      s = new Snake()
+      bstart = true
+      btype = false
+      gtime = 0
+      bolad.disabled = false
+      init()
+      auto()
+    })
+
+    stop.addEventListener('click', e => {
+      clearInterval(setInte)
+      btype = false
+      bstart = false
+      bolad.innerHTML = createTable(s)
+      headStyle(s)
+    })
+
+    start.addEventListener('click', e => {
+      if (!bstart) {
+        bstart = true
+        s.time = Date.now() - gtime   //差时
+        auto()
+      }
+    })
+
+    close.addEventListener('click', e => {
+      confim.style.display = 'none'
+      s = new Snake1()
+      bstart = true
+      btype = false
+      gtime = 0
+      bolad.disabled = false
+      init()
+    })
+
+    //状态设置
+    function changeStaus(s) {
+      if (s.next()) {
+        bolad.innerHTML = createTable(s)
+        headStyle(s)
+        gettime(s)
+      } else {
+        bolad.disabled = true
+        confim.style.display = 'block'
+      }
+    }
+
+    //键盘事件，按方向键
+    window.addEventListener('keyup', e => {
+      headStyle(s)
+      switch (e.key) {
+        case 'ArrowUp':
+          s.setHeadDirection('A')
+          changeStaus(s)
+          return
+        case 'ArrowDown':
+          s.setHeadDirection('V')
+          changeStaus(s)
+          return
+        case 'ArrowLeft':
+          s.setHeadDirection('<')
+          changeStaus(s)
+          return
+        case 'ArrowRight':
+          s.setHeadDirection('>')
+          changeStaus(s)
+          return
+      }
+    })
+
+  </script>
+
+</body>
+
+</html>

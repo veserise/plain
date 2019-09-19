@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>sweeper</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+  <section>
+    <header>
+      <aside class='bar'>
+        <select name="level" id="level">
+          <option value="1"> 10 x 10 </option>
+          <option value="2"> 16 x 16 </option>
+        </select>
+      </aside>
+      <aside class='barsorce'>
+        count <span class="swp">0</span>
+      </aside>
+    </header>
+    <div class="box"></div>
+    <div class="confim">
+      <span class="close"> X </span>
+      <p></p>
+      <button class="replay">再玩一次</button>
+    </div>
+  </section>
+  <script src="./sweeper.js"></script>
+  <script>
+    	//禁用右键菜单
+		window.oncontextmenu = function () {
+			return false
+    }
+    
+    //获取DOM元素
+    var level = document.querySelector('#level')
+    var close = document.querySelector('.close')
+    var confim = document.querySelector('.confim')
+    var replay = document.querySelector('.replay')
+
+    //创建新对象
+    var ms = new mineSweeper()
+    var lvalue = level.value
+
+    //选择leverl, 
+    level.addEventListener('change', e => {
+      lvalue = level.value
+      ms = new mineSweeper(lvalue)
+      e.preventDefault()
+    })
+
+    //重新操作
+    replay.addEventListener('click', e => {
+      ms = new mineSweeper(lvalue)
+      confim.style.display = 'none'
+      e.preventDefault()
+    })
+
+    //关闭弹出窗口
+    close.addEventListener('click', e => {
+      confim.style.display = 'none'
+    })
+
+
+  </script>
+</body>
+
+</html>

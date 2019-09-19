@@ -1,0 +1,248 @@
+body {
+  background: linear-gradient(#ffffff 50%, rgba(255, 255, 255, 0) 0) 0 0,
+    radial-gradient(circle closest-side, #ffffff 53%, rgba(255, 255, 255, 0) 0)
+      0 0,
+    radial-gradient(circle closest-side, #ffffff 50%, rgba(255, 255, 255, 0) 0)
+      55px 0 #0e2406;
+  background-size: 110px 150px;
+  background-repeat: repeat-x;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+section {
+  width: 1000px;
+  margin: auto;
+  margin-top: 10%;
+}
+
+/*header*/
+header {
+  top: 10px;
+  width: 600px;
+  height: 20px;
+  padding: 10px;
+  margin: auto;
+  position: absolute;
+}
+
+aside {
+  left: 0px;
+  width: 200px;
+  height: 85px;
+  padding: 20px;
+  position: absolute;
+  text-align: center;
+  border: 1px solid #fff;
+  background-color: #ee5500;
+}
+
+aside::before,
+aside::after {
+  content: "x";
+  bottom: -20px;
+  width: 20px;
+  height: 20px;
+  border-radius: 20px;
+  position: absolute;
+  border: 10px solid #c1c1c1;
+  background-color: #dfdfde;
+  animation: 0.5s rotate ;
+}
+
+aside::before {
+  left: 40px;
+}
+
+aside::after {
+  right: 40px;
+}
+
+.barsorce {
+  left: auto;
+  right: 0px;
+}
+
+select {
+  width: 140px;
+  height: 40px;
+  text-align: center;
+}
+
+select > option {
+  height: 60px;
+  margin-top: 4px;
+}
+
+span {
+  width: 60px;
+  height: 40px;
+  font-size: 24px;
+  text-align: center;
+  display: inline-block;
+  box-sizing: content-box;
+}
+
+.swp {
+  font-size: 18px;
+  line-height: 2;
+  background-color: #fff;
+}
+
+/*面板*/
+div.box {
+  margin-top: 150px;
+}
+
+table {
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 25px 50px 0 rgba(0, 0, 0, 0.1);
+}
+
+td,
+tr {
+  text-align: center;
+  border: 2px solid #272822;
+}
+
+td {
+  cursor: pointer;
+  position: relative;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+/*等级*/
+.level1 {
+  width: 80px;
+  height: 80px;
+  font-weight: 600;
+  font-size: 30px;
+}
+
+.level2 {
+  width: 60px;
+  height: 60px;
+  border-radius: 4px;
+  font-size: 22px;
+}
+
+/*隐藏*/
+.fontnone {
+  font-size: 0;
+  background-color: #4dc1f9;
+}
+
+/*显示*/
+.fontblock {
+  font-size: 16px;
+}
+
+/*显示颜色*/
+.c2 {
+  font-size: 0;
+  background-color: #fff;
+}
+
+/*地雷*/
+.c1 {
+  background-color: #ed6464;
+}
+
+/*旗子*/
+.flag:before {
+  content: "";
+  width: 0;
+  height: 0;
+  left: 20px;
+  top: 20px;
+  position: absolute;
+  border-color: transparent red;
+  border-width: 5px 0 28px 28px;
+  border-style: solid;
+}
+
+.question {
+  font-size: 16px;
+  background-color: lightgreen;
+}
+
+/*数字颜色*/
+.numcolor1 {
+  color: blue;
+}
+
+.numcolor2 {
+  color: green;
+}
+
+.numcolor3 {
+  color: pink;
+}
+
+.numcolor4 {
+  color: gray;
+}
+
+.numcolor5 {
+  color: yellow;
+}
+
+.numcolor6 {
+  color: red;
+}
+
+.numcolor7 {
+  color: black;
+}
+
+.numcolor8 {
+  color: lightgreen;
+}
+
+.confim {
+  display: none;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  color: #fff;
+  margin: auto;
+  width: 600px;
+  height: 400px;
+  z-index: 1000;
+  font-size: 50px;
+  position: fixed;
+  text-align: center;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.close {
+  content: "x";
+  right: 10px;
+  font-size: 24px;
+  position: absolute;
+}
+
+.close:hover {
+  color: red;
+}
+
+.replay {
+  width: 160px;
+  height: 80px;
+  font-size: 30px;
+  outline: none;
+  background-color: #fff;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
