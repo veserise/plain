@@ -1,237 +1,193 @@
-const express = require('express')
 const port = 3005
-const app = express()
-
+const http = require('http')
+const path = require('path')
+const url = require('url')
+const express = require('express')
+const socketIo = require('socket.io')
 const cookieParser = require('cookie-parser')
-const emailTransporter = require('./email')
+const session = require('express-session')
+const dbPromise = require('./db')   //数据库
+let db
 
-const changepwdTokemap = {}  //纪录用户的邮箱
-const users = [{
-  name: 'a',
-  pwd: 123,
-  email: '1005281785@qq.com'
-}]
+const app = express()
+const server = http.createServer(app)
+const ioServer = socketIo(server)
+const userRouter = require('./user')  //针对于用户
 
+app.locals.pretty = true  //美化模板输出
+
+ioServer.on('connection', socket => {
+  var path = url.parse(socket.request.headers.referer).path
+  socket.on('select room', roomid => {
+    socket.join('/vote/' + roomid)
+  })
+})
+
+
+/**
+ * 中间件
+ * 
+ */
 
 app.use((req, res, next) => {
   res.set('Content-Type', 'text/html; charset=UTF-8')
   next()
 })
+app.set('views', path.join(__dirname, 'views'))
+app.set('view engine', 'pug')
+app.set('stylesheets', path.join(__dirname, 'stylesheets'))
+app.set('stylesheets engine', 'css')
+app.use(express.json())   //解析json请求体
 app.use(express.static(__dirname + '/static'))
-app.use(express.urlencoded({
-  extended: true
-}))
-
-//将cookie的内容进行解密
-app.use(cookieParser('my secret'))
 
 
-app.get('/', (req, res, next) => {
-  if (req.signedCookies.user) {
-    res.send(`
-      <div>
-        <h2>欢迎来投票</h2>
-        <a href="/create">创建投票</a>
-        <a href="/logout">退出</a>
-      </div>
-    `)
+app.use(express.urlencoded({ extended: true })) //url编码
+app.use('/upload', express.static(__dirname + '/upload'))
+app.use(session({ secret: 'my secret', resave: false, cookie: { maxAge: 60000 } }))
+app.use(cookieParser('my secret')) //将cookie的内容进行解密
+
+//首页
+app.get('/', async(req, res, next) => {
+  if (req.signedCookies.userid) {
+    var userid = req.signedCookies.userid
+    var user =  await db.get('SELECT * FROM users WHERE id=?', userid)
+    var img = await db.get('SELECT * FROM imgs WHERE id=?', user.avatarid)
+
+    var users = await db.all('SELECT * FROM users')
+    var imgs = await db.all('SELECT * FROM imgs')
+    var votes = await db.all('SELECT * FROM votes')
+    var options = await db.all('SELECT * FROM options')
+    var voteups = await db.all('SELECT * FROM voteups')
+
+    res.render('vote-index.pug', {
+      img:img,
+      imgs:imgs,
+      user:user,
+      users:users,
+      votes:votes,
+      voteups:voteups,
+      options:options,
+    })
   } else {
-    res.send(`
-      <div>
-        <a href="/register">注册</a>
-        <a href="/login">登陆</a>
-      </div>
-    `)
+    res.render('login.pug',{})
   }
 
 })
 
-//注册页面
-app.route('/register')
-  .get((req, res, next) => {
-    res.send(`
-      <form action="/register" method="post">
-        <h1>注册</h1>
-        用户名：<input type="text" name="name"><br>
-        密 码：<input type="password" name="pwd"><br>
-        邮 箱： <input type="text" name="email"><br>
-        <button>提交</button>
-      </form>
-    `)
+
+app.route('/create')
+  .get(async (req, res, next) => {
+    var user =  await db.get('SELECT * FROM users WHERE id=?', req.signedCookies.userid)
+    var img = await db.get('SELECT * FROM imgs WHERE id=?', user.avatarid)
+    res.render('create', {
+      img:img,
+      user:user,
+    })
   })
-  
-  .post((req, res, next) => {
-    var userInfo = req.body
-    if (users.findIndex(it => it.name == userInfo.name) >= 0) {
-      res.end(`
-          用户被占用<span id ="showCount1">3</span>秒跳转
-          <script>
-          var cout = 3
-          setInterval(()=>{
-            document.querySelector('#showCount1').textContent = cout--
-          }, 1000)
-          setTimeout( ()=>{
-            location.href = '/register'
-          },3000)
-        </script>
-      `)
-    } else {
-      res.end(`
-          注册成功<span id ="showCount2">3</span>秒跳转
-          <script>
-          var cout = 3
-          setInterval(()=>{
-            document.querySelector('#showCount2').textContent = cout--
-          }, 1000)
-          setTimeout( ()=>{
-            location.href = '/login'
-          },3000)
-        </script>
-      `)
-      users.push(userInfo)
-    }
+  .post(async (req, res, next) => {
+
   })
 
-//登陆页面
-app.route('/login')
-  .get((req, res, next) => {
-    res.send(`
-    <form id="loginForm" action="/login" method="post">
-      <h1>登陆</h1>
-      用户名： <input type="text" name="name"/><br>
-      密  码： <input type="password" name="pwd"/><br>
-      <a href="/forgot">忘记密码</a>
-      <button>登陆</button>
-    </form>
+//创建投票
+app.post('/create-vote', async (req, res, next) => {
+  var info = req.body
+  var userid = req.signedCookies.userid
 
-    <script>
-      loginForm.onsubmit = e => {
-        e.preventDefault()
-        var name = document.querySelector('[name="name"]').value
-        var pwd = document.querySelector('[name="pwd"]').value
+  var user = await db.run('INSERT INTO votes (title, desc ,userid, singleSelection, deadline, anonymouse) VALUES (?,?,?,?,?,?)',
+    info.title, info.desc, userid, info.singleSelection, info.deadline, info.anonymouse
+  )
 
-        var xhr = new XMLHttpRequest()
-        xhr.open('POST', '/login')
-        xhr.onload = () => {
-          var data = JSON.parse(xhr.responseText)
-          if (data.code == 0) {
-            alert('登陆成功，页面跳转')
-            location.href = '/'
-          } else {
-            alert('登陆失败')
-          }
-        }
-        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8')
-        xhr.send('name=' + name + '&pwd=' + pwd)
-      }
-    </script>
-  `)
-  })
-  .post((req, res, next) => {
-    var loginU = req.body
-    if (users.findIndex(it => {
-      return it.name == loginU.name && it.pwd == loginU.pwd
-    }) >= 0) {
-      //用户登陆，信息cookie,标记，进行加密
-      res.cookie('user', loginU.name, {
-        signed: true,
-      })
-      res.json({code: 0})
-      return
-      res.end(`
-        修改成功，<span id ="showCount3">3</span>秒跳转
-        <script>
-          var cout = 3
-          setInterval(()=>{
-            document.querySelector('#showCount3').textContent = cout--
-          }, 1000)
-          setTimeout( ()=>{
-            location.href = '/'
-          },3000)
-        </script>
-      `)
-    } else {
-      res.json({code: -1})
-    }
-  })
+  var vote = await db.get('SELECT * FROM votes ORDER BY id DESC LIMIT 1')
 
-app.get('/logout', (req, res, next) => {
-  res.clearCookie('user')  //清楚当前用户标记
-  res.redirect('/')  //跳回首页
+  await Promise.all(info.options.map(option => {
+    return db.run('INSERT INTO options (content, voteid) VALUES (?,?)', option, vote.id)
+  }))
+
+  if( req.is('json')){
+    res.json(vote)
+  }else{
+    res.redirect('/vote/' + vote.id)
+  }
 })
 
-//忘记密码
-app.route('/forgot')
-  .get((req, res, next) => {
-    res.end(`
-    <form action="/forgot" method="post">
-      请输入邮箱；<input type="tetx" name="email"><br>
-      <button>确定</button>
-    </form>
-    `)
+//投票页面
+app.get('/vote/:id', async (req, res, next) => {
+  var votePromise = db.get("SELECT * FROM votes WHERE id=?", req.params.id)
+  var optionPromise = db.all("SELECT * FROM options WHERE voteid=?", req.params.id)
+  var user =  await db.get('SELECT * FROM users WHERE id=?', req.signedCookies.userid)
+  var img = await db.get('SELECT * FROM imgs WHERE id=?', user.avatarid)
+  
+  var vote = await votePromise
+  var options = await optionPromise
+
+  res.render('vote.pug', {
+    img:img,
+    user:user,
+    vote: vote,
+    options: options,
   })
-  .post((req, res, next) => {
-    var email = req.body.email
-    var user = req.body.user
-    var pwd = req.body.pwd
+})
 
-    var token = Math.random().toString().slice(2)   //随机生成数
-    changepwdTokemap[token] = email
-    var link = `http://localhost:3005/change-pwd/${token}`
+//投票
+app.post('/voteup', async (req, res, next) => {
+  var userid = req.signedCookies.userid
 
-    emailTransporter.sendMail({
-      from: '1005281785@qq.com',
-      to: email,
-      subject: '修改密码',
-      html: `<a href="${link}"></a>`
-    }, (err, info) => {
-      if (err) {
-        console.log(err)
-      } else {
-        console.log('send to email: ' + info)
-      }
-    })
+  var body = req.body
+  var voteid = body.voteid
+  var optionid = body.optionid
 
-    res.end('以向你的邮箱发送密码重置连接')
-  })
+  var voteupInfo = await db.get('SELECT * FROM voteups WHERE userid=? AND voteid=?', userid, voteid)
 
-//修改密码
-app.route('/change-pwd/:token')
-  .get((req, res, next) => {
-    var token = req.params.token
-    var user = users.find(it => it.email == changepwdTokemap[token])
-
-    res.end(`
-      此页面可以重置${user}的密码
-      <form action="." method="post">
-        <input type="password" name="pwd>
-      </form>
-    `)
-
-  })
-  .post((req, res, next) => {
-    var token = req.params.token
-    var user = users.find(it => it.email == changepwdTokemap[token])
-    var pwd = req.body.pwd
-    if (user) {
-      user.pwd = pwd
-      delete changepwdTokemap[token]
-      res.end('密码修改成功')
-      users[user].pwd = pwd
-    } else {
-      res.end('连接已失效')
-    }
+  if (voteupInfo) { //已经投过
+    await db.run('UPDATE voteups SET optionid=? WHERE userid=? AND voteid=?',optionid, userid, voteid)
+  } else {
+    await db.run('INSERT INTO voteups (userid, optionid, voteid) VALUES (?,?,?)',userid, optionid, voteid)
+  }
+  
+  ioServer.in(`/vote/${voteid}`).emit('new vote', {
+    userid,
+    voteid,
+    optionid: optionid,
   })
 
+  var voteups = await db.all('SELECT * FROM voteups WHERE voteid=?',voteid)
+  res.json(voteups)
+})
 
+//某个用户获取某个问题的投票信息
+app.get('/voteup/:voteid/info', async (req, res, next) => {
+  var userid = req.signedCookies.userid
+  var voteid = req.params.voteid
+  var userVoteupInfo = await db.get('SELECT * FROM voteups WHERE userid=? AND voteid=?', userid, voteid)
 
-// app.get('/create', (req, res, next) => {
+  if (userVoteupInfo) {
+    var voteups = await db.all('SELECT * FROM voteups WHERE voteid=?', voteid)
+    res.json(voteups)
+  } else {
+    res.json(null)
+  }
+})
 
-// })
-// app.get('/vote/:id', (req, res, next) => {
+//获取投票信息
+app.get('/voteinfo/:id',async ( req,res, next) =>{
+  let id = req.params.id
+  var vote = await db.get('SELECT * FROM votes WHERE id=?', id)
+  var options = await db.all('SELECT * FROM options WHERE voteid=?', id)
+  var voteups = await db.all('SELECT * FROM voteups WHERE voteid=?', id)
 
-// })
+  res.json({
+    vote: vote,
+    voteups: voteups,
+    options: options,
+  })
+})
 
-app.listen(port, () => {
-  console.log('listeneing to port:', port)
+app.use('/', userRouter)
+
+//数据库打开,服务器才进行操作
+dbPromise.then(dbResolve => {
+  db = dbResolve
+  server.listen(port, () => {
+    console.log('listeneing to port:', port)
+  })
 })
