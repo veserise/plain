@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<style type="text/css" media="screen">
+	body{
+		margin: 0 auto;
+		padding: 0;
+	}
+	canvas{
+	    display: block;
+	    box-shadow: -2px -2px 2px #efefef,5px 5px 5px #b9b9b9 ;
+	    margin: 50px auto;
+	}
+	</style>
+
+</head>
+<body>
+
+<canvas id="canvas" width="450px" height="450px"></canvas>
+
+
+<script>
+	var user = true; //黑棋为true，白棋为false
+	var over = false; //游戏结束标志
+	var chessBox = []; //用于存放下棋时，存储交叉点，是否已落棋子
+	var wins = [];//赢法数组,遍历数组
+	var userCount = [];  //用户落子得分
+	var computerCount = [];  //计算机落子得分
+	var userSore = [];  //计分
+	var computerSore = [];   
+	var max = 0, pointx = 0, pointy = 0;
+
+	//棋盘线条
+	var canvas = document.getElementById('canvas');
+	var context = canvas.getContext("2d");
+
+	//定义数组
+	for(var i = 0; i < 15; i++) {
+		chessBox[i] = [];
+		wins[i] = [];
+		userSore[i] = [];
+		computerSore[i] = [];
+		for(var j = 0; j < 15; j++) {
+			chessBox[i][j] = 0;
+			wins[i][j] = [];
+			userSore[i][j] = 0;
+			computerSore[i][j] = 0;
+		}
+	}
+
+	//赢法数组
+	var count = 0;
+	for(var i = 0; i < 15; i++) {      //横
+		for(var j = 0; j < 11; j++) {
+			for(var k = 0; k < 5; k++){
+				wins[i][j+k][count] = true;
+			}
+			count++;
+		}
+	}
+	for(var i = 0; i < 15; i++) {      //竖
+		for(var j = 0; j < 11; j++) {
+			for(var k = 0; k < 5; k++){
+				wins[j+k][i][count] = true;
+			}
+			count++;
+		}
+	}
+	for(var i = 0; i < 11; i++) {      //斜
+		for(var j = 0; j < 11; j++) {
+			for(var k = 0; k < 5; k++){
+				wins[i+k][j+k][count] = true;
+			}
+			count++;
+		}
+	}
+	for(var i = 0; i < 11; i++) {      //反斜
+		for(var j = 11; j > 3; j--) {
+			for(var k = 0; k < 5; k++){
+				wins[i+k][j-k][count] = true;
+			}
+			count++;
+		}
+	}
+	for(var k = 0; k < count; k++){
+		userCount[k] = 0;
+		computerCount[k] = 0;
+	}
+	//划线
+	var drawline = function() {
+		context.strokeStyle="#bfbfbf";
+		for (var i = 0; i < 15; i++) {
+			context.moveTo(15 + i*30, 15);//方向
+			context.lineTo(15 + i*30, 435);//位置
+			context.stroke();
+			context.moveTo( 15, 15 + i*30);//方向
+			context.lineTo(435, 15 + i*30);//位置
+			context.stroke();
+		}
+	}
+
+	//落棋
+	var onestep = function(i, j , user){
+
+		context.beginPath();
+		context.arc(15 + i*30, 15 + j*30, 13, 0, 2*Math.PI);
+		context.closePath(); 
+
+		var gradient = context.createRadialGradient(15 + i*30+2, 15 + j*30-2, 13, 15 + i*30, 15 + j*30, 4); //渐变画圆
+		if(user){
+			gradient.addColorStop(0, "#0a0a0a");//黑子
+			gradient.addColorStop(1, "#636766");
+		}else{
+			gradient.addColorStop(0, "#d1d1d1");//白子
+			gradient.addColorStop(1, "#f9f9f9");
+		}
+		
+		context.fillStyle = gradient;//填充
+		context.fill();
+	}
+
+	//计算机自动落棋（最高得分位置优先）
+	var conputAI = function(){
+		for(var i = 0; i < 15; i++) {
+			for(var j = 0; j < 15; j++) {
+				if(chessBox[i][j] == 0){    //交叉点
+					for(var k = 0; k < count ; k++){
+						if(wins[i][j][k]){
+							if(userCount[k] == 1){       //用户拦截
+								userSore[i][j] += 200;
+							}else if(userCount[k] == 2){
+								userSore[i][j] += 800;
+							}else if(userCount[k] == 3){
+								userSore[i][j] += 2000;
+							}else if(userCount[k] == 4){
+								userSore[i][j] += 10000;
+							}
+							if(computerCount[k] == 1){    //计算机拦截
+								computerSore[i][j] += 210;
+							}else if(computerCount[k] == 2){
+								computerSore[i][j] += 810;
+							}else if(computerCount[k] == 3){
+								computerSore[i][j] += 2100;
+							}else if(computerCount[k] == 4){
+								computerSore[i][j] += 20000;
+							}
+						}
+					}
+					if(userSore[i][j] > max){    //选择最合适的点，分数最高的点
+						max = userSore[i][j];
+						pointx = i;
+						pointy = j;
+					}
+					if(userSore[i][j] == max){
+						if(computerSore[i][j] > computerSore[pointx][pointy]){
+							pointx = i;
+							pointy = j;
+						}
+					}
+					if(computerSore[i][j] > max){   //选择最合适的点，分数最高的点
+						max = computerSore[i][j];
+						pointx = i;
+						pointy = j;
+					}
+					if(computerSore[i][j] == max){
+						if(userSore[i][j] > userSore[pointx][pointy]){
+							pointx = i;
+							pointy = j;
+						}
+					}
+				}
+			}
+		}
+		onestep(pointx, pointy , false);  //白子落棋
+		chessBox[pointx][pointy]  = 2;  
+
+		for(var k = 0; k < count; k++){
+			if(wins[pointx][pointy][k]){
+				computerCount[k]++;
+				userCount[k] == 200;
+				if(computerCount[k] == 5){
+					window.alert("恭喜计算机赢了！");
+					over = true;
+				} 
+			}
+		}
+		if(!over){
+			user = !user;
+		}
+	}
+
+	drawline();
+	//鼠标点击落棋
+	canvas.onclick = function(e){  
+		if(over){
+			return;
+		}
+		if(!user){
+			return;
+		}
+		var x = e.offsetX; //获取点击时的横坐标
+		var y = e.offsetY; //获取点击时的宗坐标
+
+		var i = Math.floor(x / 30);  //取整
+		var j = Math.floor(y / 30);  //取整
+
+		if(chessBox[i][j] == 0){ //判断是否有落棋
+			onestep(i, j , user);
+			chessBox[i][j]  = 1; //黑子
+			for(var k = 0; k < count; k++){
+				if(wins[i][j][k]){
+					userCount[k]++;
+					computerCount[k] = 200;
+					if(userCount[k] == 5){
+						window.alert("恭喜你，你赢了！");
+						over = true;
+					} 
+				}
+			}
+			if(!over){
+				user = !user;
+				conputAI();
+			}
+		}
+	}
+
+</script>
+</body>
+</html>
